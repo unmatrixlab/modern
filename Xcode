@@ -1,0 +1,107 @@
+import SwiftUI
+import WebKit
+
+struct WebView: UIViewRepresentable {
+    let urlString: String
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+    
+    func makeUIView(context: Context) -> WKWebView {
+        guard let url = URL(string: urlString) else {
+            return WKWebView()
+        }
+        
+        let webView = WKWebView()
+        // Forzamos el modo oscuro y configuramos los fondos para evitar que se vea blanco
+        webView.overrideUserInterfaceStyle = .dark
+        webView.backgroundColor = .black
+        webView.scrollView.backgroundColor = .black
+        
+        // Asignamos el uiDelegate para que los diálogos (alert, prompt, confirm) se muestren correctamente en iOS
+        webView.uiDelegate = context.coordinator
+        
+        webView.load(URLRequest(url: url))
+        return webView
+    }
+    
+    func updateUIView(_ webView: WKWebView, context: Context) {
+        // No es necesario actualizar nada por ahora
+    }
+    
+    // El coordinador implementa WKUIDelegate para mostrar diálogos nativos en iOS
+    class Coordinator: NSObject, WKUIDelegate {
+        // Para alert()
+        func webView(_ webView: WKWebView,
+                     runJavaScriptAlertPanelWithMessage message: String,
+                     initiatedByFrame frame: WKFrameInfo,
+                     completionHandler: @escaping () -> Void) {
+            let alert = UIAlertController(title: nil, message: message, preferredStyle: .alert)
+            alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in
+                completionHandler()
+            })
+            if let vc = webView.window?.rootViewController {
+                vc.present(alert, animated: true, completion: nil)
+            } else {
+                completionHandler()
+            }
+        }
+        
+        // Para confirm()
+        func webView(_ webView: WKWebView,
+                     runJavaScriptConfirmPanelWithMessage message: String,
+                     initiatedByFrame frame: WKFrameInfo,
+                     completionHandler: @escaping (Bool) -> Void) {
+            let alert = UIAlertController(title: nil, message: message, preferredStyle: .alert)
+            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { _ in
+                completionHandler(false)
+            })
+            alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in
+                completionHandler(true)
+            })
+            if let vc = webView.window?.rootViewController {
+                vc.present(alert, animated: true, completion: nil)
+            } else {
+                completionHandler(false)
+            }
+        }
+        
+        // Para prompt()
+        func webView(_ webView: WKWebView,
+                     runJavaScriptTextInputPanelWithPrompt prompt: String,
+                     defaultText: String?,
+                     initiatedByFrame frame: WKFrameInfo,
+                     completionHandler: @escaping (String?) -> Void) {
+            let alert = UIAlertController(title: nil, message: prompt, preferredStyle: .alert)
+            alert.addTextField { textField in
+                textField.text = defaultText
+            }
+            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { _ in
+                completionHandler(nil)
+            })
+            alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in
+                let text = alert.textFields?.first?.text
+                completionHandler(text)
+            })
+            if let vc = webView.window?.rootViewController {
+                vc.present(alert, animated: true, completion: nil)
+            } else {
+                completionHandler(nil)
+            }
+        }
+    }
+}
+
+struct ContentView: View {
+    var body: some View {
+        WebView(urlString: "https://unmatrixlab.com/breathe-flow-6/")
+            .edgesIgnoringSafeArea(.all)
+            .preferredColorScheme(.dark)
+            .background(Color.black)
+    }
+}
+
+#Preview {
+    ContentView()
+}
